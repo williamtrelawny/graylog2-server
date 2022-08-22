@@ -15,9 +15,10 @@
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
 import * as Immutable from 'immutable';
-import uuid from 'uuid/v4';
 
 import isDeepEqual from 'stores/isDeepEqual';
+import generateId from 'logic/generateId';
+import type { FiltersType } from 'views/types';
 
 import type { SearchType } from './SearchType';
 
@@ -33,6 +34,7 @@ type InternalState = {
   query: any,
   timerange: any,
   filter?: FilterType,
+  filters?: FiltersType,
   searchTypes: SearchTypeList,
 };
 
@@ -41,6 +43,7 @@ export type QueryJson = {
   query: any,
   timerange: any,
   filter?: FilterType,
+  filters?: FiltersType,
   search_types: any,
 };
 
@@ -49,7 +52,10 @@ export type ElasticsearchQueryString = {
   query_string: string,
 };
 
-export const createElasticsearchQueryString = (query = ''): ElasticsearchQueryString => ({ type: 'elasticsearch', query_string: query });
+export const createElasticsearchQueryString = (query = ''): ElasticsearchQueryString => ({
+  type: 'elasticsearch',
+  query_string: query,
+});
 
 const _streamFilters = (selectedStreams: Array<string>) => {
   return Immutable.List(selectedStreams.map((stream) => Immutable.Map({ type: 'stream', id: stream })));
@@ -124,8 +130,8 @@ const isNullish = (o: any) => (o === null || o === undefined);
 export default class Query {
   private _value: InternalState;
 
-  constructor(id: QueryId, query: any, timerange: any, filter?: FilterType, searchTypes?: SearchTypeList) {
-    this._value = { id, query, timerange, filter, searchTypes };
+  constructor(id: QueryId, query: any, timerange: any, filter?: FilterType, searchTypes?: SearchTypeList, filters?: FiltersType) {
+    this._value = { id, query, timerange, filter, filters, searchTypes };
   }
 
   get id(): QueryId {
@@ -144,13 +150,17 @@ export default class Query {
     return this._value.filter;
   }
 
+  get filters(): FiltersType | null | undefined {
+    return this._value.filters;
+  }
+
   get searchTypes(): SearchTypeList {
     return this._value.searchTypes;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-use-before-define
   toBuilder(): Builder {
-    const { id, query, timerange, filter, searchTypes } = this._value;
+    const { id, query, timerange, filter, filters, searchTypes } = this._value;
 
     // eslint-disable-next-line @typescript-eslint/no-use-before-define
     const builder = Query.builder()
@@ -158,6 +168,7 @@ export default class Query {
       .query(query)
       .timerange(timerange)
       .filter(filter)
+      .filters(filters)
       .searchTypes(searchTypes);
 
     return filter ? builder.filter(filter) : builder;
@@ -176,6 +187,7 @@ export default class Query {
       || !isDeepEqual(this.query, other.query)
       || !isDeepEqual(this.timerange, other.timerange)
       || !((isNullish(this.filter) && isNullish(other.filter)) || isDeepEqual(this.filter, other.filter))
+      || !((isNullish(this.filters) && isNullish(other.filters)) || isDeepEqual(this.filters, other.filters))
       || !isDeepEqual(this.searchTypes, other.searchTypes)) {
       return false;
     }
@@ -184,13 +196,14 @@ export default class Query {
   }
 
   toJSON(): QueryJson {
-    const { id, query, timerange, filter, searchTypes } = this._value;
+    const { id, query, timerange, filter, filters, searchTypes } = this._value;
 
     return {
       id,
       query,
       timerange,
       filter,
+      filters,
       search_types: searchTypes,
     };
   }
@@ -203,9 +216,9 @@ export default class Query {
   }
 
   static fromJSON(value: QueryJson): Query {
-    const { id, query, timerange, filter, search_types } = value;
+    const { id, query, timerange, filter, filters, search_types } = value;
 
-    return new Query(id, query, timerange, Immutable.fromJS(filter), search_types);
+    return new Query(id, query, timerange, Immutable.fromJS(filter), search_types, filters ? Immutable.List(filters) : filters);
   }
 }
 
@@ -221,7 +234,7 @@ class Builder {
   }
 
   newId(): Builder {
-    return this.id(uuid());
+    return this.id(generateId());
   }
 
   query(value: QueryString): Builder {
@@ -236,13 +249,17 @@ class Builder {
     return new Builder(this.value.set('filter', Immutable.fromJS(value)));
   }
 
+  filters(value: FiltersType | null | undefined): Builder {
+    return new Builder(this.value.set('filters', value ? Immutable.List(value) : value));
+  }
+
   searchTypes(value: SearchTypeList): Builder {
     return new Builder(this.value.set('searchTypes', value));
   }
 
   build(): Query {
-    const { id, query, timerange, filter, searchTypes } = this.value.toObject();
+    const { id, query, timerange, filter, filters, searchTypes } = this.value.toObject();
 
-    return new Query(id, query, timerange, filter, searchTypes);
+    return new Query(id, query, timerange, filter, searchTypes, filters);
   }
 }

@@ -25,8 +25,6 @@ import org.graylog.plugins.views.search.SearchType;
 import org.graylog.plugins.views.search.elasticsearch.ElasticsearchQueryString;
 import org.graylog.plugins.views.search.elasticsearch.FieldTypesLookup;
 import org.graylog.plugins.views.search.elasticsearch.IndexLookup;
-import org.graylog.plugins.views.search.elasticsearch.QueryStringDecorators;
-import org.graylog.plugins.views.search.engine.SearchConfig;
 import org.graylog.plugins.views.search.filter.AndFilter;
 import org.graylog.plugins.views.search.filter.StreamFilter;
 import org.graylog.plugins.views.search.searchtypes.MessageList;
@@ -39,7 +37,6 @@ import org.graylog.storage.elasticsearch7.views.searchtypes.ESSearchTypeHandler;
 import org.graylog2.plugin.indexer.searches.timeranges.RelativeRange;
 import org.graylog2.plugin.indexer.searches.timeranges.TimeRange;
 import org.joda.time.DateTimeUtils;
-import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -52,6 +49,7 @@ import org.mockito.junit.MockitoRule;
 
 import javax.inject.Provider;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -66,7 +64,7 @@ import static org.mockito.Mockito.when;
 
 public class ElasticsearchBackendUsingCorrectIndicesTest {
     private static Map<String, Provider<ESSearchTypeHandler<? extends SearchType>>> handlers = ImmutableMap.of(
-            MessageList.NAME, () -> new ESMessageList(new QueryStringDecorators.Fake())
+            MessageList.NAME, ESMessageList::new
     );
 
     @Rule
@@ -97,8 +95,8 @@ public class ElasticsearchBackendUsingCorrectIndicesTest {
         this.backend = new ElasticsearchBackend(handlers,
                 client,
                 indexLookup,
-                new QueryStringDecorators.Fake(),
-                (elasticsearchBackend, ssb, job, query) -> new ESGeneratedQueryContext(elasticsearchBackend, ssb, job, query, fieldTypesLookup),
+                (elasticsearchBackend, ssb, job, query, errors) -> new ESGeneratedQueryContext(elasticsearchBackend, ssb, job, query, errors, fieldTypesLookup),
+                usedSearchFilters -> Collections.emptySet(),
                 false);
     }
 
@@ -125,7 +123,7 @@ public class ElasticsearchBackendUsingCorrectIndicesTest {
 
     @Test
     public void queryDoesNotFallBackToUsingAllIndicesWhenNoIndexRangesAreReturned() throws Exception {
-        final ESGeneratedQueryContext context = backend.generate(job, query, new SearchConfig(Period.ZERO));
+        final ESGeneratedQueryContext context = backend.generate(job, query, Collections.emptySet());
         backend.doRun(job, query, context);
 
         verify(client, times(1)).msearch(clientRequestCaptor.capture(), any());
@@ -140,7 +138,7 @@ public class ElasticsearchBackendUsingCorrectIndicesTest {
         final long datetimeFixture = 1530194810;
         DateTimeUtils.setCurrentMillisFixed(datetimeFixture);
 
-        final ESGeneratedQueryContext context = backend.generate(job, query, new SearchConfig(Period.ZERO));
+        final ESGeneratedQueryContext context = backend.generate(job, query, Collections.emptySet());
         backend.doRun(job, query, context);
 
         ArgumentCaptor<TimeRange> captor = ArgumentCaptor.forClass(TimeRange.class);
@@ -176,7 +174,7 @@ public class ElasticsearchBackendUsingCorrectIndicesTest {
                 .build();
         final Search search = dummySearch(query);
         final SearchJob job = new SearchJob("job1", search, "admin");
-        final ESGeneratedQueryContext context = backend.generate(job, query, new SearchConfig(Period.ZERO));
+        final ESGeneratedQueryContext context = backend.generate(job, query, Collections.emptySet());
 
         when(indexLookup.indexNamesForStreamsInTimeRange(ImmutableSet.of("streamId"), RelativeRange.create(600)))
                 .thenReturn(ImmutableSet.of("index1", "index2"));
@@ -197,7 +195,7 @@ public class ElasticsearchBackendUsingCorrectIndicesTest {
                 .build();
         final Search search = dummySearch(query);
         final SearchJob job = new SearchJob("job1", search, "admin");
-        final ESGeneratedQueryContext context = backend.generate(job, query, new SearchConfig(Period.ZERO));
+        final ESGeneratedQueryContext context = backend.generate(job, query, Collections.emptySet());
 
         when(indexLookup.indexNamesForStreamsInTimeRange(ImmutableSet.of("stream1", "stream2"), RelativeRange.create(600)))
                 .thenReturn(ImmutableSet.of("index1", "index2"));

@@ -38,13 +38,6 @@ const Routes = {
   NOTFOUND: '/notfound',
   SEARCH: '/search',
   STREAMS: '/streams',
-  LEGACY_ALERTS: {
-    LIST: '/legacy/alerts',
-    CONDITIONS: '/legacy/alerts/conditions',
-    NEW_CONDITION: '/legacy/alerts/conditions/new',
-    NOTIFICATIONS: '/legacy/alerts/notifications',
-    NEW_NOTIFICATION: '/legacy/alerts/notifications/new',
-  },
   ALERTS: {
     LIST: '/alerts',
     DEFINITIONS: {
@@ -64,6 +57,7 @@ const Routes = {
   SOURCES: '/sources',
   DASHBOARDS: '/dashboards',
   GETTING_STARTED: '/gettingstarted',
+  GLOBAL_API_BROWSER_URL: '/api/api-browser/global/index.html',
   SYSTEM: {
     CONFIGURATIONS: '/system/configurations',
     CONTENTPACKS: {
@@ -220,10 +214,6 @@ const Routes = {
   stream_alerts: (streamId: string) => `/alerts/?stream_id=${streamId}`,
 
   legacy_stream_search: (streamId: string) => `/streams/${streamId}/messages`,
-  show_alert: (alertId: string) => `${Routes.LEGACY_ALERTS.LIST}/${alertId}`,
-  show_alert_condition: (streamId: string, conditionId: string) => `${Routes.LEGACY_ALERTS.CONDITIONS}/${streamId}/${conditionId}`,
-  new_alert_condition_for_stream: (streamId: string) => `${Routes.LEGACY_ALERTS.NEW_CONDITION}?stream_id=${streamId}`,
-  new_alert_notification_for_stream: (streamId: string) => `${Routes.LEGACY_ALERTS.NEW_NOTIFICATION}?stream_id=${streamId}`,
 
   dashboard_show: (dashboardId: string) => `/dashboards/${dashboardId}`,
 
@@ -252,33 +242,44 @@ const Routes = {
   edit_input_extractor: (nodeId: string, inputId: string, extractorId: string) => `/system/inputs/${nodeId}/${inputId}/extractors/${extractorId}/edit`,
   getting_started: (fromMenu) => `${Routes.GETTING_STARTED}?menu=${fromMenu}`,
   filtered_metrics: (nodeId: string, filter: string) => `${Routes.SYSTEM.METRICS(nodeId)}?filter=${filter}`,
+  global_api_browser: () => Routes.GLOBAL_API_BROWSER_URL,
 } as const;
 
-const qualifyUrls = (routes, appPrefix): typeof routes => {
-  const qualifiedRoutes = {};
+const prefixUrlWithoutHostname = (url: string, prefix: string) => {
+  const uri = new URI(url);
 
-  Object.keys(routes).forEach((routeName) => {
-    switch (typeof routes[routeName]) {
-      case 'string':
-        qualifiedRoutes[routeName] = new URI(`${appPrefix}/${routes[routeName]}`).normalizePath().resource();
-        break;
-      case 'function':
-        qualifiedRoutes[routeName] = (...params) => {
-          const result = routes[routeName](...params);
+  return uri.directory(`${prefix}/${uri.directory()}`)
+    .normalizePath()
+    .resource();
+};
 
-          return new URI(`${appPrefix}/${result}`).normalizePath().resource();
-        };
+type RouteFunction<P extends Array<any>> = (...args: P) => string;
+type RouteMapEntry = string | RouteFunction<any> | RouteMap;
+type RouteMap = { [routeName: string]: RouteMapEntry };
 
-        break;
-      case 'object':
-        qualifiedRoutes[routeName] = qualifyUrls(routes[routeName], appPrefix);
-        break;
-      default:
-        break;
+const isLiteralRoute = (entry: RouteMapEntry): entry is string => (typeof entry === 'string');
+const isRouteFunction = (entry: RouteMapEntry): entry is RouteFunction<any> => (typeof entry === 'function');
+
+const qualifyUrls = <R extends RouteMap>(routes: R, appPrefix: string): R => {
+  if (appPrefix === '/') {
+    return routes;
+  }
+
+  return Object.fromEntries(Object.entries(routes).map(([routeName, routeValue]) => {
+    if (isLiteralRoute(routeValue)) {
+      return [routeName, prefixUrlWithoutHostname(routeValue, appPrefix)];
     }
-  });
 
-  return qualifiedRoutes;
+    if (isRouteFunction(routeValue)) {
+      return [routeName, (...params: Parameters<typeof routeValue>) => {
+        const result = routeValue(...params);
+
+        return prefixUrlWithoutHostname(result, appPrefix);
+      }];
+    }
+
+    return [routeName, qualifyUrls(routeValue, appPrefix)];
+  }));
 };
 
 const qualifiedRoutes: typeof Routes = AppConfig.gl2AppPathPrefix() ? qualifyUrls(Routes, AppConfig.gl2AppPathPrefix()) : Routes;
@@ -301,7 +302,7 @@ const unqualified = Routes;
  * <LinkContainer to={Routes.pluginRoutes('SYSTEM_PIPELINES_PIPELINEID')(123)}>...</LinkContainer>
  *
  */
-const pluginRoute = (routeKey, throwError = true) => {
+const pluginRoute = (routeKey: string, throwError: boolean = true) => {
   const pluginRoutes = {};
 
   PluginStore.exports('routes').forEach((route) => {
@@ -336,14 +337,14 @@ const pluginRoute = (routeKey, throwError = true) => {
   return route;
 };
 
-const getPluginRoute = (routeKey) => pluginRoute(routeKey, false);
+const getPluginRoute = (routeKey: string) => pluginRoute(routeKey, false);
 
 /**
  * Exported constants for using strings to check if a plugin is registered by it's description.
  *
  */
 export const ENTERPRISE_ROUTE_DESCRIPTION = 'Enterprise';
-export const SECURITY_ROUTE_DESCRIPTION = 'Analyst Tools';
+export const SECURITY_ROUTE_DESCRIPTION = 'Security';
 
 const defaultExport = Object.assign(qualifiedRoutes, { pluginRoute, getPluginRoute, unqualified });
 

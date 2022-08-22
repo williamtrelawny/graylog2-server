@@ -34,6 +34,7 @@ export type BaseProps = {
   value: string,
   warning?: QueryValidationState,
   wrapEnabled?: boolean,
+  inputId?: string,
 };
 
 type EnabledInputProps = BaseProps & {
@@ -85,6 +86,7 @@ const BasicQueryInput = forwardRef<StyledAceEditor, Props>((props, ref) => {
     warning,
     wrapEnabled,
     onLoad,
+    inputId,
   } = props;
   const theme = useTheme();
   const markers = useMemo(() => getMarkers(error, warning), [error, warning]);
@@ -92,16 +94,23 @@ const BasicQueryInput = forwardRef<StyledAceEditor, Props>((props, ref) => {
     if (editor) {
       editor.renderer.setScrollMargin(6, 5);
       editor.renderer.setPadding(12);
+
+      if (inputId) {
+        editor.textInput.getElement().setAttribute('id', inputId);
+      }
+
       onLoad?.(editor);
     }
-  }, [onLoad]);
+  }, [inputId, onLoad]);
+  const editorProps = useMemo(() => ({ $blockScrolling: Infinity, selectionStyle: 'line' }), []);
+  const setOptions = useMemo(() => ({ indentedSoftWrap: false }), []);
 
   const commonProps = {
     $height: height,
     aceTheme: 'ace-queryinput', // NOTE: is usually just `theme` but we need that prop for styled-components
     className,
     disabled,
-    editorProps: { $blockScrolling: Infinity, selectionStyle: 'line' },
+    editorProps,
     fontSize: theme.fonts.size.large,
     highlightActiveLine: false,
     markers,
@@ -112,7 +121,7 @@ const BasicQueryInput = forwardRef<StyledAceEditor, Props>((props, ref) => {
     placeholder,
     readOnly: disabled,
     ref,
-    setOptions: { indentedSoftWrap: false },
+    setOptions,
     showGutter: false,
     showPrintMargin: false,
     value,
@@ -152,6 +161,7 @@ BasicQueryInput.propTypes = {
   enableAutocompletion: PropTypes.bool,
   error: PropTypes.any,
   height: PropTypes.number,
+  inputId: PropTypes.string,
   maxLines: PropTypes.number,
   onBlur: PropTypes.func,
   onChange: PropTypes.func,
@@ -169,6 +179,7 @@ BasicQueryInput.defaultProps = {
   enableAutocompletion: false,
   error: undefined,
   height: undefined,
+  inputId: undefined,
   maxLines: 4,
   onBlur: undefined,
   onChange: undefined,
@@ -180,4 +191,4 @@ BasicQueryInput.defaultProps = {
   wrapEnabled: true,
 };
 
-export default BasicQueryInput;
+export default React.memo(BasicQueryInput);

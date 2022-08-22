@@ -37,6 +37,8 @@ import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Duration;
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 import static java.time.temporal.ChronoUnit.SECONDS;
@@ -46,6 +48,7 @@ import static org.graylog.testing.graylognode.NodeContainerConfig.DEBUG_PORT;
 
 public class NodeContainerFactory {
     private static final Logger LOG = LoggerFactory.getLogger(NodeContainerFactory.class);
+    private static final String FEATURE_PREFIX = "GRAYLOG_FEATURE";
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
     @SuppressWarnings("OctalInteger")
@@ -132,6 +135,14 @@ public class NodeContainerFactory {
                 .withEnv("GRAYLOG_ROOT_PASSWORD_SHA2", ADMIN_PW_SHA2)
                 .withEnv("GRAYLOG_LB_RECOGNITION_PERIOD_SECONDS", "0")
                 .withEnv("GRAYLOG_VERSIONCHECKS", "false")
+
+                .withEnv("GRAYLOG_TRANSPORT_EMAIL_ENABLED", "true")
+                .withEnv("GRAYLOG_TRANSPORT_EMAIL_HOSTNAME", "mailserver")
+                .withEnv("GRAYLOG_TRANSPORT_EMAIL_PORT", "1025")
+                .withEnv("GRAYLOG_TRANSPORT_EMAIL_USE_AUTH", "false")
+                .withEnv("GRAYLOG_TRANSPORT_EMAIL_SUBJECT_PREFIX", "[graylog]")
+                .withEnv("GRAYLOG_TRANSPORT_EMAIL_FROM_EMAIL", "developers@graylog.com")
+
                 .waitingFor(new WaitAllStrategy()
                         .withStrategy(Wait.forLogMessage(".*Graylog server up and running.*", 1))
                         // To be able to search for data we need the index ranges to be computed. Since this is an async
@@ -164,6 +175,8 @@ public class NodeContainerFactory {
             }
         });
 
+        addEnabledFeatureFlagsToContainerEnv(config, container);
+
         container.start();
 
         if (config.enableDebugging) {
@@ -180,6 +193,18 @@ public class NodeContainerFactory {
         });
 
         return container;
+    }
+
+    private static void addEnabledFeatureFlagsToContainerEnv(NodeContainerConfig config, GenericContainer<?> container) {
+        List<String> prefixed = config.getEnabledFeatureFlags()
+                .stream()
+                .map(e -> e.startsWith(FEATURE_PREFIX) ? e : String.join("_", FEATURE_PREFIX, e))
+                .map(e -> e.toUpperCase(Locale.ENGLISH))
+                .collect(Collectors.toList());
+
+        for (String name : prefixed) {
+            container.withEnv(name, "on");
+        }
     }
 
     private static Path pathTo(String propertyName) {

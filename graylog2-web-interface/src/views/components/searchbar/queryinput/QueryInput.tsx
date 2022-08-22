@@ -28,10 +28,11 @@ import useFieldTypes from 'views/logic/fieldtypes/useFieldTypes';
 import { DEFAULT_TIMERANGE } from 'views/Constants';
 import { isNoTimeRangeOverride } from 'views/typeGuards/timeRange';
 import usePluginEntities from 'views/logic/usePluginEntities';
+import useUserDateTime from 'hooks/useUserDateTime';
 
 import type { AutoCompleter, Editor } from './ace-types';
 import type { BaseProps } from './BasicQueryInput';
-import BaseQueryInput from './BasicQueryInput';
+import BasicQueryInput from './BasicQueryInput';
 
 import SearchBarAutoCompletions from '../SearchBarAutocompletions';
 import type { Completer, FieldTypes } from '../SearchBarAutocompletions';
@@ -96,7 +97,7 @@ const _onLoadEditor = (editor, isInitialTokenizerUpdate: React.MutableRefObject<
   if (editor) {
     editor.commands.removeCommands(['find', 'indent', 'outdent']);
 
-    editor.session.on('tokenizerUpdate', (input, { bgTokenizer: { currentLine, lines } }) => {
+    editor.session.on('tokenizerUpdate', (_input, { bgTokenizer: { currentLine, lines } }) => {
       if (!isInitialTokenizerUpdate.current) {
         editor.completers.forEach((completer) => {
           if (completer?.shouldShowCompletions(currentLine, lines)) {
@@ -134,7 +135,7 @@ const _updateEditorConfiguration = (node, completer, onExecute) => {
   }
 };
 
-const useCompleter = ({ streams, timeRange, completerFactory }: Pick<Props, 'streams' | 'timeRange' | 'completerFactory'>) => {
+const useCompleter = ({ streams, timeRange, completerFactory, userTimezone }: Pick<Props, 'streams' | 'timeRange' | 'completerFactory'> & { userTimezone: string }) => {
   const completers = usePluginEntities('views.completers') ?? [];
   const { data: queryFields } = useFieldTypes(streams, isNoTimeRangeOverride(timeRange) ? DEFAULT_TIMERANGE : timeRange);
   const { data: allFields } = useFieldTypes([], DEFAULT_TIMERANGE);
@@ -146,7 +147,7 @@ const useCompleter = ({ streams, timeRange, completerFactory }: Pick<Props, 'str
   }, [allFields, queryFields]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(() => completerFactory(completers, timeRange, streams, fieldTypes), [completerFactory, timeRange, streams, fieldTypes]);
+  return useMemo(() => completerFactory(completers, timeRange, streams, fieldTypes, userTimezone), [completerFactory, timeRange, streams, fieldTypes, userTimezone]);
 };
 
 type Props = BaseProps & {
@@ -155,11 +156,13 @@ type Props = BaseProps & {
     timeRange: TimeRange | NoTimeRangeOverride | undefined,
     streams: Array<string>,
     fieldTypes: FieldTypes,
+    userTimezone: string,
   ) => AutoCompleter,
   disableExecution?: boolean,
   isValidating?: boolean,
+  name: string,
   onBlur?: (query: string) => void,
-  onChange: (query: string) => Promise<string>,
+  onChange: (changeEvent: { target: { value: string, name: string } }) => Promise<string>,
   onExecute: (query: string) => void,
   streams?: Array<string> | undefined,
   timeRange?: TimeRange | NoTimeRangeOverride | undefined,
@@ -172,6 +175,7 @@ const QueryInput = ({
   disableExecution,
   error,
   height,
+  inputId,
   isValidating,
   maxLines,
   onBlur,
@@ -184,10 +188,12 @@ const QueryInput = ({
   validate,
   warning,
   wrapEnabled,
+  name,
 }: Props) => {
+  const { userTimezone } = useUserDateTime();
   const isInitialTokenizerUpdate = useRef(true);
   const { enableSmartSearch } = useContext(UserPreferencesContext);
-  const completer = useCompleter({ streams, timeRange, completerFactory });
+  const completer = useCompleter({ streams, timeRange, completerFactory, userTimezone });
   const onLoadEditor = useCallback((editor: Editor) => _onLoadEditor(editor, isInitialTokenizerUpdate), []);
   const onExecute = useCallback((editor: Editor) => handleExecution({
     editor,
@@ -199,23 +205,29 @@ const QueryInput = ({
     validate,
   }), [onExecuteProp, value, error, disableExecution, isValidating, validate]);
   const updateEditorConfiguration = useCallback((node) => _updateEditorConfiguration(node, completer, onExecute), [onExecute, completer]);
+  const _onChange = useCallback((newQuery) => {
+    onChange({ target: { value: newQuery, name } });
+
+    return Promise.resolve(newQuery);
+  }, [name, onChange]);
 
   return (
-    <BaseQueryInput height={height}
-                    className={className}
-                    disabled={false}
-                    enableAutocompletion={enableSmartSearch}
-                    error={error}
-                    warning={warning}
-                    maxLines={maxLines}
-                    onBlur={onBlur}
-                    onExecute={onExecute}
-                    onChange={onChange}
-                    onLoad={onLoadEditor}
-                    placeholder={placeholder}
-                    ref={updateEditorConfiguration}
-                    value={value}
-                    wrapEnabled={wrapEnabled} />
+    <BasicQueryInput height={height}
+                     className={className}
+                     disabled={false}
+                     enableAutocompletion={enableSmartSearch}
+                     error={error}
+                     inputId={inputId}
+                     warning={warning}
+                     maxLines={maxLines}
+                     onBlur={onBlur}
+                     onExecute={onExecute}
+                     onChange={_onChange}
+                     onLoad={onLoadEditor}
+                     placeholder={placeholder}
+                     ref={updateEditorConfiguration}
+                     value={value}
+                     wrapEnabled={wrapEnabled} />
   );
 };
 
@@ -224,6 +236,7 @@ QueryInput.propTypes = {
   completerFactory: PropTypes.func,
   disableExecution: PropTypes.bool,
   error: PropTypes.any,
+  inputId: PropTypes.string,
   height: PropTypes.number,
   isValidating: PropTypes.bool.isRequired,
   maxLines: PropTypes.number,
@@ -245,6 +258,7 @@ QueryInput.defaultProps = {
   disableExecution: false,
   error: undefined,
   height: undefined,
+  inputId: undefined,
   maxLines: undefined,
   onBlur: undefined,
   placeholder: '',

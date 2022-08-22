@@ -27,6 +27,7 @@ import org.graylog.plugins.views.search.Search;
 import org.graylog.plugins.views.search.SearchDomain;
 import org.graylog.plugins.views.search.SearchJob;
 import org.graylog.plugins.views.search.db.SearchJobService;
+import org.graylog.plugins.views.search.engine.SearchExecutor;
 import org.graylog.plugins.views.search.events.SearchJobExecutionEvent;
 import org.graylog.plugins.views.search.permissions.SearchUser;
 import org.graylog2.audit.jersey.AuditEvent;
@@ -96,6 +97,23 @@ public class SearchResource extends RestResource implements PluginRestResource {
 
         final Search saved = searchDomain.saveForUser(search, searchUser);
         final SearchDTO result = SearchDTO.fromSearch(saved);
+        if (result == null || result.id() == null) {
+            return Response.serverError().build();
+        }
+        LOG.debug("Created new search object {}", result.id());
+        return Response.created(URI.create(result.id())).entity(result).build();
+    }
+
+    @POST
+    @ApiOperation(value = "Create a search query", response = SearchDTOv2.class, code = 201)
+    @AuditEvent(type = ViewsAuditEventTypes.SEARCH_CREATE)
+    @Consumes({SEARCH_FORMAT_V2})
+    @Produces({SEARCH_FORMAT_V2})
+    public Response createSearchV2(@ApiParam SearchDTOv2 searchRequest, @Context SearchUser searchUser) {
+        final Search search = searchRequest.toSearch();
+
+        final Search saved = searchDomain.saveForUser(search, searchUser);
+        final SearchDTOv2 result = SearchDTOv2.fromSearch(saved);
         if (result == null || result.id() == null) {
             return Response.serverError().build();
         }

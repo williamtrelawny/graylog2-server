@@ -105,6 +105,7 @@ export const SearchStore: Store<SearchStoreState> = singletonStore(
         this._trigger();
       }
     },
+
     onSearchExecutionStateUpdate(executionState: SearchExecutionState) {
       this.executionState = executionState;
     },
@@ -135,6 +136,13 @@ export const SearchStore: Store<SearchStoreState> = singletonStore(
       const promise = fetch('GET', `${searchUrl}/${searchId}`);
 
       SearchActions.get.promise(promise);
+
+      return promise;
+    },
+
+    refresh() {
+      const promise = Promise.resolve();
+      SearchActions.refresh.promise(promise);
 
       return promise;
     },

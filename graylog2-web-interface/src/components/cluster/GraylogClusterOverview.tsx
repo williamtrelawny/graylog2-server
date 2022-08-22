@@ -32,6 +32,8 @@ import { Spinner } from 'components/common';
 import { ClusterTrafficActions, ClusterTrafficStore } from 'stores/cluster/ClusterTrafficStore';
 import { NodesStore } from 'stores/nodes/NodesStore';
 import { formatTrafficData } from 'util/TrafficUtils';
+import { isPermitted } from 'util/PermissionsMixin';
+import useCurrentUser from 'hooks/useCurrentUser';
 
 import TrafficGraph from './TrafficGraph';
 
@@ -72,6 +74,7 @@ const GraylogClusterTrafficGraph = () => {
   const eventThrottler = useRef(new EventHandlersThrottler());
   const containerRef = useRef(null);
   const licensePlugin = PluginStore.exports('license');
+  const currentUser = useCurrentUser();
 
   useEffect(() => {
     ClusterTrafficActions.getTraffic();
@@ -99,7 +102,7 @@ const GraylogClusterTrafficGraph = () => {
     };
   }, []);
 
-  const TrafficGraphComponent = licensePlugin[0]?.EnterpriseTrafficGraph || TrafficGraph;
+  const TrafficGraphComponent = (isPermitted(currentUser.permissions, ['licenses:read']) && licensePlugin[0]?.EnterpriseTrafficGraph) || TrafficGraph;
   let sumOutput = null;
   let trafficGraph = <Spinner />;
 

@@ -17,10 +17,7 @@
 package org.graylog.testing.completebackend;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import io.restassured.RestAssured;
-import io.restassured.config.FailureConfig;
-import io.restassured.config.RestAssuredConfig;
-import io.restassured.listener.ResponseValidationFailureListener;
+import org.apache.commons.lang3.StringUtils;
 import org.graylog.testing.containermatrix.MongodbServer;
 import org.graylog.testing.elasticsearch.SearchServerInstance;
 import org.graylog.testing.graylognode.ExecutableNotFoundException;
@@ -32,17 +29,22 @@ import org.slf4j.LoggerFactory;
 import org.testcontainers.containers.Network;
 
 import java.net.URL;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
+import java.util.ServiceLoader;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 public class ContainerizedGraylogBackend implements GraylogBackend, AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(GraylogBackend.class);
     private Network network;
     private SearchServerInstance searchServer;
     private MongoDBInstance mongodb;
+    private MailServerContainer emailServerInstance;
     private NodeInstance node;
 
     private ContainerizedGraylogBackend() {
@@ -50,24 +52,33 @@ public class ContainerizedGraylogBackend implements GraylogBackend, AutoCloseabl
 
     public static ContainerizedGraylogBackend createStarted(SearchVersion esVersion, MongodbServer mongodbVersion,
                                                             int[] extraPorts, List<URL> mongoDBFixtures,
-                                                            PluginJarsProvider pluginJarsProvider, MavenProjectDirProvider mavenProjectDirProvider) {
+                                                            PluginJarsProvider pluginJarsProvider, MavenProjectDirProvider mavenProjectDirProvider,
+                                                            List<String> enabledFeatureFlags, boolean preImportLicense, boolean withMailServerEnabled) {
 
         final ContainerizedGraylogBackend backend = new ContainerizedGraylogBackend();
-        backend.create(esVersion, mongodbVersion, extraPorts, mongoDBFixtures, pluginJarsProvider, mavenProjectDirProvider);
+        backend.create(esVersion, mongodbVersion, extraPorts, mongoDBFixtures, pluginJarsProvider, mavenProjectDirProvider, enabledFeatureFlags, preImportLicense, withMailServerEnabled);
         return backend;
     }
 
     private void create(SearchVersion esVersion, MongodbServer mongodbVersion,
                         int[] extraPorts, List<URL> mongoDBFixtures,
-                        PluginJarsProvider pluginJarsProvider, MavenProjectDirProvider mavenProjectDirProvider) {
+                        PluginJarsProvider pluginJarsProvider, MavenProjectDirProvider mavenProjectDirProvider,
+                        List<String> enabledFeatureFlags, boolean preImportLicense, boolean withMailServerEnabled) {
 
         final SearchServerInstanceFactory searchServerInstanceFactory = new SearchServerInstanceFactoryByVersion(esVersion);
         Network network = Network.newNetwork();
         ExecutorService executor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("build-es-container-for-api-it").build());
         Future<SearchServerInstance> esFuture = executor.submit(() -> searchServerInstanceFactory.create(network));
         MongoDBInstance mongoDB = MongoDBInstance.createStartedWithUniqueName(network, Lifecycle.CLASS, mongodbVersion);
+        if(withMailServerEnabled) {
+            this.emailServerInstance = MailServerContainer.createStarted(network);
+        }
         mongoDB.dropDatabase();
         mongoDB.importFixtures(mongoDBFixtures);
+
+        if(preImportLicense) {
+            createLicenses(mongoDB, "GRAYLOG_LICENSE_STRING", "GRAYLOG_SECURITY_LICENSE_STRING");
+        }
 
         try {
             // Wait for ES before starting the Graylog node to avoid any race conditions
@@ -78,7 +89,8 @@ public class ContainerizedGraylogBackend implements GraylogBackend, AutoCloseabl
                     esInstance.internalUri(),
                     esInstance.version(),
                     extraPorts,
-                    pluginJarsProvider, mavenProjectDirProvider);
+                    pluginJarsProvider, mavenProjectDirProvider,
+                    enabledFeatureFlags);
             this.network = network;
             this.searchServer = esInstance;
             this.mongodb = mongoDB;
@@ -93,6 +105,14 @@ public class ContainerizedGraylogBackend implements GraylogBackend, AutoCloseabl
             throw new RuntimeException(e);
         } finally {
             executor.shutdown();
+        }
+    }
+
+    private void createLicenses(final MongoDBInstance mongoDBInstance, final String... licenseStrs) {
+        final List<String> licenses = Arrays.stream(licenseStrs).map(System::getenv).filter(p -> StringUtils.isNotBlank(p)).collect(Collectors.toList());
+        if(!licenses.isEmpty()) {
+            ServiceLoader<TestLicenseImporter> loader = ServiceLoader.load(TestLicenseImporter.class);
+            loader.forEach(importer -> importer.importLicenses(mongoDBInstance, licenses));
         }
     }
 
@@ -128,6 +148,7 @@ public class ContainerizedGraylogBackend implements GraylogBackend, AutoCloseabl
         return node.apiPort();
     }
 
+    @Override
     public String getLogs() {
         return node.getLogs();
     }
@@ -146,11 +167,20 @@ public class ContainerizedGraylogBackend implements GraylogBackend, AutoCloseabl
         return mongodb;
     }
 
+    public Optional<MailServerInstance> getEmailServerInstance() {
+        return Optional.ofNullable(emailServerInstance);
+    }
+
     @Override
     public void close() {
         node.close();
         mongodb.close();
         searchServer.close();
+
+        if (emailServerInstance != null) {
+            emailServerInstance.close();
+        }
+
         network.close();
     }
 

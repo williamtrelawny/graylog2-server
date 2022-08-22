@@ -30,7 +30,8 @@ const mockLoadMessage = jest.fn();
 const mockGetInput = jest.fn();
 const mockListNodes = jest.fn();
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const mockListStreams = jest.fn((...args) => Promise.resolve([]));
+const mockListStreams = jest.fn((..._args) => Promise.resolve([]));
+const mockPluginStoreExports = jest.fn();
 
 jest.mock('stores/nodes/NodesStore', () => ({
   NodesActions: { list: (...args) => mockListNodes(...args) },
@@ -53,6 +54,12 @@ jest.mock('stores/streams/StreamsStore', () => ({ listStreams: (...args) => mock
 jest.mock('views/logic/fieldtypes/useFieldTypes');
 jest.mock('routing/withParams', () => (x) => x);
 
+jest.mock('graylog-web-plugin/plugin', () => ({
+  PluginStore: {
+    exports: jest.fn((...args) => mockPluginStoreExports(...args)),
+  },
+}));
+
 type SimpleShowMessagePageProps = {
   index: string,
   messageId: string,
@@ -65,7 +72,7 @@ const SimpleShowMessagePage = ({ index, messageId }: SimpleShowMessagePageProps)
 
 describe('ShowMessagePage', () => {
   beforeEach(() => {
-    asMock(useFieldTypes).mockClear();
+    jest.clearAllMocks();
     asMock(useFieldTypes).mockReturnValue({ data: [] });
   });
 
@@ -82,7 +89,8 @@ describe('ShowMessagePage', () => {
     mockLoadMessage.mockImplementation(() => Promise.resolve(message));
     mockGetInput.mockImplementation(() => Promise.resolve(input));
 
-    const { container } = render(<SimpleShowMessagePage index="graylog_5" messageId="20f683d2-a874-11e9-8a11-0242ac130004" />);
+    const { container } = render(<SimpleShowMessagePage index="graylog_5"
+                                                        messageId="20f683d2-a874-11e9-8a11-0242ac130004" />);
 
     await screen.findByText(/Deprecated field/);
 
@@ -100,7 +108,11 @@ describe('ShowMessagePage', () => {
 
     await screen.findByText(/Deprecated field/);
 
-    expect(useFieldTypes).toHaveBeenCalledWith(['deadbeef'], { from: '2019-07-17T11:20:33.000Z', to: '2019-07-17T11:20:33.000Z', type: 'absolute' });
+    expect(useFieldTypes).toHaveBeenCalledWith(['deadbeef'], {
+      from: '2019-07-17T11:20:33.000Z',
+      to: '2019-07-17T11:20:33.000Z',
+      type: 'absolute',
+    });
   });
 
   it('renders for generic event', async () => {
@@ -113,5 +125,20 @@ describe('ShowMessagePage', () => {
     await screen.findByText(/SSH Brute Force/);
 
     expect(container).toMatchSnapshot();
+  });
+
+  it('does not fetch input when opening message from forwarder', async () => {
+    mockPluginStoreExports.mockReturnValue([{
+      isLocalNode: jest.fn(() => false),
+    }]);
+
+    mockLoadMessage.mockImplementation(() => Promise.resolve(message));
+    mockGetInput.mockImplementation(() => Promise.resolve());
+    mockListStreams.mockImplementation(() => Promise.resolve([]));
+
+    render(<SimpleShowMessagePage index="graylog_5" messageId="20f683d2-a874-11e9-8a11-0242ac130004" />);
+    await screen.findByText(/Deprecated field/);
+
+    expect(mockGetInput).not.toHaveBeenCalled();
   });
 });

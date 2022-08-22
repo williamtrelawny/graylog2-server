@@ -14,23 +14,18 @@
  * along with this program. If not, see
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
-import type * as Immutable from 'immutable';
-
 import UserNotification from 'util/UserNotification';
 import fetch from 'logic/rest/FetchProvider';
 import { qualifyUrl } from 'util/URLUtils';
 import type { ElasticsearchQueryString, TimeRange } from 'views/logic/queries/Query';
-import type Parameter from 'views/logic/parameters/Parameter';
-import type { ParameterBindings } from 'views/logic/search/SearchExecutionState';
 import type { QueryValidationState } from 'views/components/searchbar/queryvalidation/types';
 import { onSubmittingTimerange } from 'views/components/TimerangeForForm';
+import generateId from 'logic/generateId';
 
 export type ValidationQuery = {
   queryString: ElasticsearchQueryString | string,
-  timeRange: TimeRange | undefined,
+  timeRange?: TimeRange | undefined,
   streams?: Array<string>,
-  parameters: Immutable.Set<Parameter>,
-  parameterBindings: ParameterBindings,
   filter?: ElasticsearchQueryString | string,
 }
 
@@ -38,25 +33,26 @@ const queryExists = (query: string | ElasticsearchQueryString) => {
   return typeof query === 'object' ? !!query.query_string : !!query;
 };
 
-export const validateQuery = ({
-  queryString,
-  timeRange,
-  streams,
-  parameters,
-  parameterBindings,
-  filter,
-}: ValidationQuery): Promise<QueryValidationState> => {
+export const validateQuery = (
+  {
+    queryString,
+    timeRange,
+    streams,
+    filter,
+    ...rest
+  }: ValidationQuery,
+  userTimezone: string,
+): Promise<QueryValidationState> => {
   if (!queryExists(queryString) && !queryExists(filter)) {
     return Promise.resolve({ status: 'OK', explanations: [] });
   }
 
   const payload = {
     query: queryString,
-    timerange: timeRange ? onSubmittingTimerange(timeRange) : undefined,
+    timerange: timeRange ? onSubmittingTimerange(timeRange, userTimezone) : undefined,
     streams,
     filter,
-    parameters,
-    parameter_bindings: parameterBindings,
+    ...rest,
   };
 
   return fetch('POST', qualifyUrl('/search/validate'), payload).then((result) => {
@@ -71,6 +67,7 @@ export const validateQuery = ({
         end_column: endColumn,
         related_property: relatedProperty,
       }) => ({
+        id: generateId(),
         errorMessage,
         errorType,
         errorTitle,
