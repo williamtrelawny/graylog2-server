@@ -20,6 +20,10 @@ import moment from 'moment';
 
 import { Input } from 'components/bootstrap';
 
+const _validationLimit = (durationInMilliseconds, rotationLimit) => {
+  return durationInMilliseconds <= moment.duration(rotationLimit).asMilliseconds();
+};
+
 class TimeBasedRotationStrategyConfiguration extends React.Component {
   static propTypes = {
     config: PropTypes.object.isRequired,
@@ -30,13 +34,18 @@ class TimeBasedRotationStrategyConfiguration extends React.Component {
 
   constructor(props) {
     super(props);
-    const { config: { rotation_period: rotationPeriod } } = this.props;
-
-    const { config: { max_rotation_period: rotationLimit } } = this.props;
+    const {
+      config: {
+        rotation_period: rotationPeriod,
+        max_rotation_period: rotationLimit,
+        rotate_empty_index_set: rotateEmptyIndexSet,
+      },
+    } = this.props;
 
     this.state = {
       rotation_period: rotationPeriod,
       rotationLimit,
+      rotate_empty_index_set: rotateEmptyIndexSet,
     };
   }
 
@@ -62,8 +71,19 @@ class TimeBasedRotationStrategyConfiguration extends React.Component {
     };
   };
 
-  _validationLimit = (durationInMilliseconds, rotationLimit) => {
-    return durationInMilliseconds <= moment.duration(rotationLimit).asMilliseconds();
+  _onRotateEmptyIndexSetUpdate = (field) => {
+    const { updateConfig } = this.props;
+
+    return () => {
+      const update = {};
+      const rotateEmptyIndexSet = this.inputs[field].getValue();
+
+      update[field] = rotateEmptyIndexSet;
+
+      this.setState(update);
+
+      updateConfig(update);
+    };
   };
 
   _isValidPeriod = (duration) => {
@@ -72,7 +92,7 @@ class TimeBasedRotationStrategyConfiguration extends React.Component {
     const checkInMilliseconds = moment.duration(check).asMilliseconds();
 
     return checkInMilliseconds >= 3600000 && (
-      rotationLimit ? this._validationLimit(checkInMilliseconds, rotationLimit) : true
+      rotationLimit ? _validationLimit(checkInMilliseconds, rotationLimit) : true
     );
   };
 
@@ -92,13 +112,19 @@ class TimeBasedRotationStrategyConfiguration extends React.Component {
   };
 
   render() {
-    const { rotation_period: rotationPeriod, rotationLimit } = this.state;
+    const {
+      rotation_period: rotationPeriod,
+      rotate_empty_index_set: rotateEmptyIndexSet,
+      rotationLimit,
+    } = this.state;
     const maxRotationPeriodHelpText = rotationLimit ? ` The max rotation period is set to ${moment.duration(rotationLimit).humanize()} by Administrator.` : '';
 
     return (
       <div>
         <Input id="rotation-period"
                type="text"
+               labelClassName="col-sm-3"
+               wrapperClassName="col-sm-9"
                ref={(rotationPeriodRef) => { this.inputs.rotation_period = rotationPeriodRef; }}
                label="Rotation period (ISO8601 Duration)"
                onChange={this._onPeriodUpdate('rotation_period')}
@@ -107,6 +133,18 @@ class TimeBasedRotationStrategyConfiguration extends React.Component {
                addonAfter={this._formatDuration()}
                bsStyle={this._validationState()}
                required />
+        <Input id="rotate-empty-index-sets"
+               labelClassName="col-sm-3"
+               wrapperClassName="col-sm-9"
+               label="Empty index set">
+          <Input id="rotate-empty-index-sets-checkbox"
+                 type="checkbox"
+                 ref={(rotateEmptyIndexSetRef) => { this.inputs.rotate_empty_index_set = rotateEmptyIndexSetRef; }}
+                 label="Rotate empty index set"
+                 onChange={this._onRotateEmptyIndexSetUpdate('rotate_empty_index_set')}
+                 checked={rotateEmptyIndexSet}
+                 help="Apply the rotation strategy even when the index set is empty (not recommended)." />
+        </Input>
       </div>
     );
   }

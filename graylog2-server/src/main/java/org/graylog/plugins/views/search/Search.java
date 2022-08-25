@@ -20,7 +20,6 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonPOJOBuilder;
 import com.google.auto.value.AutoValue;
@@ -30,6 +29,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import org.graylog.plugins.views.search.rest.ExecutionState;
 import org.graylog.plugins.views.search.rest.ExecutionStateGlobalOverride;
+import org.graylog.plugins.views.search.searchfilters.model.ReferencedSearchFilter;
 import org.graylog.plugins.views.search.views.PluginMetadataSummary;
 import org.graylog2.contentpacks.ContentPackable;
 import org.graylog2.contentpacks.EntityDescriptorIds;
@@ -42,8 +42,10 @@ import org.mongojack.ObjectId;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -56,7 +58,7 @@ import static java.util.stream.Collectors.toSet;
 @AutoValue
 @JsonAutoDetect
 @JsonDeserialize(builder = Search.Builder.class)
-public abstract class Search implements ContentPackable<SearchEntity> {
+public abstract class Search implements ContentPackable<SearchEntity>, ParameterProvider {
     public static final String FIELD_REQUIRES = "requires";
     static final String FIELD_CREATED_AT = "created_at";
     public static final String FIELD_OWNER = "owner";
@@ -89,12 +91,13 @@ public abstract class Search implements ContentPackable<SearchEntity> {
     @JsonProperty(FIELD_CREATED_AT)
     public abstract DateTime createdAt();
 
+    @Override
     @JsonIgnore
     public Optional<Parameter> getParameter(String parameterName) {
         return Optional.ofNullable(parameterIndex.get(parameterName));
     }
 
-    public Search applyExecutionState(ObjectMapper objectMapper, ExecutionState executionState) {
+    public Search applyExecutionState(ExecutionState executionState) {
         final Builder builder = toBuilder();
 
         if (!executionState.parameterBindings().isEmpty()) {
@@ -184,6 +187,25 @@ public abstract class Search implements ContentPackable<SearchEntity> {
                 .filter(q -> q.hasSearchType(searchTypeId))
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Search " + id() + " doesn't have a query for search type " + searchTypeId));
+    }
+
+    /**
+     * Returns set of IDs of Search Fitters that are referenced in the queries.
+     * IDs of inlined Search Filters are not returned.
+     *
+     * @return Set of IDs of Search Fitters that are referenced in the queries.
+     */
+    @JsonIgnore
+    public Set<String> getReferencedSearchFiltersIds() {
+        return this.queries()
+                .stream()
+                .map(Query::filters)
+                .filter(Objects::nonNull)
+                .flatMap(Collection::stream)
+                .filter(usedSearchFilter -> usedSearchFilter instanceof ReferencedSearchFilter)
+                .map(usedSearchFilter -> (ReferencedSearchFilter) usedSearchFilter)
+                .map(ReferencedSearchFilter::id)
+                .collect(Collectors.toSet());
     }
 
     @AutoValue.Builder

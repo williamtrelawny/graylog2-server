@@ -44,6 +44,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -58,6 +59,7 @@ public class ContainerizedGraylogBackend implements GraylogBackend, AutoCloseabl
     private Network network;
     private SearchServerInstance searchServer;
     private MongoDBInstance mongodb;
+    private MailServerContainer emailServerInstance;
     private NodeInstance node;
 
     private ContainerizedGraylogBackend() {
@@ -66,23 +68,26 @@ public class ContainerizedGraylogBackend implements GraylogBackend, AutoCloseabl
     public static ContainerizedGraylogBackend createStarted(SearchVersion esVersion, MongodbServer mongodbVersion,
                                                             int[] extraPorts, List<URL> mongoDBFixtures,
                                                             PluginJarsProvider pluginJarsProvider, MavenProjectDirProvider mavenProjectDirProvider,
-                                                            List<String> enabledFeatureFlags, boolean preImportLicense) {
+                                                            List<String> enabledFeatureFlags, boolean preImportLicense, boolean withMailServerEnabled) {
 
         final ContainerizedGraylogBackend backend = new ContainerizedGraylogBackend();
-        backend.create(esVersion, mongodbVersion, extraPorts, mongoDBFixtures, pluginJarsProvider, mavenProjectDirProvider, enabledFeatureFlags, preImportLicense);
+        backend.create(esVersion, mongodbVersion, extraPorts, mongoDBFixtures, pluginJarsProvider, mavenProjectDirProvider, enabledFeatureFlags, preImportLicense, withMailServerEnabled);
         return backend;
     }
 
     private void create(SearchVersion esVersion, MongodbServer mongodbVersion,
                         int[] extraPorts, List<URL> mongoDBFixtures,
                         PluginJarsProvider pluginJarsProvider, MavenProjectDirProvider mavenProjectDirProvider,
-                        List<String> enabledFeatureFlags, boolean preImportLicense) {
+                        List<String> enabledFeatureFlags, boolean preImportLicense, boolean withMailServerEnabled) {
 
         final SearchServerInstanceFactory searchServerInstanceFactory = new SearchServerInstanceFactoryByVersion(esVersion);
         Network network = Network.newNetwork();
         ExecutorService executor = Executors.newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("build-es-container-for-api-it").build());
         Future<SearchServerInstance> esFuture = executor.submit(() -> searchServerInstanceFactory.create(network));
         MongoDBInstance mongoDB = MongoDBInstance.createStartedWithUniqueName(network, Lifecycle.CLASS, mongodbVersion);
+        if(withMailServerEnabled) {
+            this.emailServerInstance = MailServerContainer.createStarted(network);
+        }
         mongoDB.dropDatabase();
         mongoDB.importFixtures(mongoDBFixtures);
 
@@ -288,11 +293,20 @@ public class ContainerizedGraylogBackend implements GraylogBackend, AutoCloseabl
         return mongodb;
     }
 
+    public Optional<MailServerInstance> getEmailServerInstance() {
+        return Optional.ofNullable(emailServerInstance);
+    }
+
     @Override
     public void close() {
         node.close();
         mongodb.close();
         searchServer.close();
+
+        if (emailServerInstance != null) {
+            emailServerInstance.close();
+        }
+
         network.close();
     }
 

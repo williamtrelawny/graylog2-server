@@ -33,7 +33,6 @@ import FormikInput from '../../components/common/FormikInput';
 
 const testTimeout = applyTimeoutMultiplier(30000);
 
-jest.mock('hooks/useUserDateTime');
 jest.mock('views/components/searchbar/queryvalidation/QueryValidation', () => mockComponent('QueryValidation'));
 jest.mock('views/components/searchbar/queryinput/QueryInput', () => ({ value = '' }: { value: string }) => <span>{value}</span>);
 jest.mock('hooks/useFeature', () => (key: string) => key === 'search_filter');
@@ -192,7 +191,7 @@ describe('WidgetQueryControls pluggable controls', () => {
       {
         pluggableControl: 'Initial Value2',
         queryString: '',
-        streams: [],
+        streams: undefined,
         timerange: { from: 300, type: 'relative' },
       },
       widget,
@@ -205,7 +204,7 @@ describe('WidgetQueryControls pluggable controls', () => {
     await waitFor(() => expect(mockOnValidate).toHaveBeenCalledWith({
       pluggableControl: 'Initial Value',
       queryString: '',
-      streams: [],
+      streams: undefined,
       timerange: { from: 300, type: 'relative' },
     }));
   });
@@ -216,8 +215,8 @@ describe('WidgetQueryControls pluggable controls', () => {
     await waitFor(() => expect(validateQuery).toHaveBeenCalledWith({
       customKey: 'Initial Value',
       queryString: '',
-      streams: [],
+      streams: undefined,
       timeRange: { from: 300, type: 'relative' },
-    }));
+    }, 'Europe/Berlin'));
   });
 });

@@ -65,6 +65,18 @@
         <build.timestamp>${maven.build.timestamp}</build.timestamp>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>software.amazon.awssdk</groupId>
+                <artifactId>bom</artifactId>
+                <version>${aws-java-sdk-2.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>com.github.rvesse</groupId>
@@ -364,10 +376,19 @@
             <version>${lucene.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-analyzers-common</artifactId>
+            <version>${lucene.version}</version>
+        </dependency>
+        <dependency>
             <groupId>io.github.classgraph</groupId>
             <artifactId>classgraph</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
 
         <!-- Logging dependencies -->
         <dependency>
@@ -688,6 +709,18 @@
             <artifactId>jsonassert</artifactId>
             <version>1.5.0</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.cronutils</groupId>
+            <artifactId>cron-utils</artifactId>
+            <exclusions>
+                <!-- Avoid warning about multiple SLF4J bindings on server startup -->
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-simple</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 

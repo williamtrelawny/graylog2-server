@@ -22,6 +22,8 @@ import io.restassured.config.RestAssuredConfig;
 import org.graylog.testing.elasticsearch.SearchServerInstance;
 import org.testcontainers.containers.Network;
 
+import java.util.Optional;
+
 public interface GraylogBackend {
     String uri();
 
@@ -44,6 +46,8 @@ public interface GraylogBackend {
     String getDbLogs();
 
     String getSysInfo();
+
+    Optional<MailServerInstance> getEmailServerInstance();
 
     default RestAssuredConfig withGraylogBackendFailureConfig() {
         return RestAssured.config().failureConfig(FailureConfig.failureConfig().with().failureListeners(

@@ -38,13 +38,6 @@ const Routes = {
   NOTFOUND: '/notfound',
   SEARCH: '/search',
   STREAMS: '/streams',
-  LEGACY_ALERTS: {
-    LIST: '/legacy/alerts',
-    CONDITIONS: '/legacy/alerts/conditions',
-    NEW_CONDITION: '/legacy/alerts/conditions/new',
-    NOTIFICATIONS: '/legacy/alerts/notifications',
-    NEW_NOTIFICATION: '/legacy/alerts/notifications/new',
-  },
   ALERTS: {
     LIST: '/alerts',
     DEFINITIONS: {
@@ -64,6 +57,7 @@ const Routes = {
   SOURCES: '/sources',
   DASHBOARDS: '/dashboards',
   GETTING_STARTED: '/gettingstarted',
+  GLOBAL_API_BROWSER_URL: '/api/api-browser/global/index.html',
   SYSTEM: {
     CONFIGURATIONS: '/system/configurations',
     CONTENTPACKS: {
@@ -220,10 +214,6 @@ const Routes = {
   stream_alerts: (streamId: string) => `/alerts/?stream_id=${streamId}`,
 
   legacy_stream_search: (streamId: string) => `/streams/${streamId}/messages`,
-  show_alert: (alertId: string) => `${Routes.LEGACY_ALERTS.LIST}/${alertId}`,
-  show_alert_condition: (streamId: string, conditionId: string) => `${Routes.LEGACY_ALERTS.CONDITIONS}/${streamId}/${conditionId}`,
-  new_alert_condition_for_stream: (streamId: string) => `${Routes.LEGACY_ALERTS.NEW_CONDITION}?stream_id=${streamId}`,
-  new_alert_notification_for_stream: (streamId: string) => `${Routes.LEGACY_ALERTS.NEW_NOTIFICATION}?stream_id=${streamId}`,
 
   dashboard_show: (dashboardId: string) => `/dashboards/${dashboardId}`,
 
@@ -252,6 +242,7 @@ const Routes = {
   edit_input_extractor: (nodeId: string, inputId: string, extractorId: string) => `/system/inputs/${nodeId}/${inputId}/extractors/${extractorId}/edit`,
   getting_started: (fromMenu) => `${Routes.GETTING_STARTED}?menu=${fromMenu}`,
   filtered_metrics: (nodeId: string, filter: string) => `${Routes.SYSTEM.METRICS(nodeId)}?filter=${filter}`,
+  global_api_browser: () => Routes.GLOBAL_API_BROWSER_URL,
 } as const;
 
 const prefixUrlWithoutHostname = (url: string, prefix: string) => {
