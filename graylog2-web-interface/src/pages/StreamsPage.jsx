@@ -19,7 +19,6 @@ import React, { useEffect } from 'react';
 import { Row, Col } from 'components/bootstrap';
 import CreateStreamButton from 'components/streams/CreateStreamButton';
 import StreamComponent from 'components/streams/StreamComponent';
-import DocumentationLink from 'components/support/DocumentationLink';
 import PageHeader from 'components/common/PageHeader';
 import { DocumentTitle, IfPermitted, Spinner } from 'components/common';
 import DocsHelper from 'util/DocsHelper';
@@ -52,22 +51,22 @@ const StreamsPage = () => {
   return (
     <DocumentTitle title="Streams">
       <div>
-        <PageHeader title="Streams">
+        <PageHeader title="Streams"
+                    documentationLink={{
+                      title: 'Streams documentation',
+                      path: DocsHelper.PAGES.STREAMS,
+                    }}
+                    actions={(
+                      <IfPermitted permissions="streams:create">
+                        <CreateStreamButton bsStyle="success"
+                                            onSave={onSave}
+                                            indexSets={indexSets} />
+                      </IfPermitted>
+          )}>
           <span>
             You can route incoming messages into streams by applying rules against them. Messages matching
             the rules of a stream are routed into it. A message can also be routed into multiple streams.
           </span>
-
-          <span>
-            Read more about streams in the <DocumentationLink page={DocsHelper.PAGES.STREAMS} text="documentation" />.
-          </span>
-
-          <IfPermitted permissions="streams:create">
-            <CreateStreamButton bsSize="large"
-                                bsStyle="success"
-                                onSave={onSave}
-                                indexSets={indexSets} />
-          </IfPermitted>
         </PageHeader>
 
         <Row className="content">

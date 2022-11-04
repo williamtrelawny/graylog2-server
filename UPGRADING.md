@@ -7,8 +7,10 @@ Please make sure to create a MongoDB database backup before starting the upgrade
 
 ## Breaking Changes
 
-* Graylog 5 is Java 17 only. We no longer support earlier versions starting with 5.0
+* Graylog 5 is Java 17 only. We no longer support earlier Java versions.
 * Support for Elasticsearch 6.X has been removed! Please use either Elasticsearch 7.10.2 or, preferably, latest OpenSearch.
+* Graylog 5 needs at least MongoDB 5.0. Our recommended upgrade path is to first bring your MongoDB to 5.0 and then perform the Graylog upgrade.
+  Hint: Graylog 4.3.x does support MongoDB 5.0, which allows for a seamless upgrade path.
 
 ## Disallowing embedding the frontend by default
 
@@ -31,6 +33,15 @@ The new default Message Processing order will run the
 
 This applies only to new Graylog installations.
 Existing setups keep the former default order for backwards compatibility.
+
+## Stream aware field types
+
+So far, when listing fields for a query, Graylog has been showing fields for all streams.
+For some systems, this list may be extremely long and contain many fields which are not present in the query results.
+It is now possible to change this behavior. When configuration property `stream_aware_field_types` is set to true, Graylog will periodically collect information on stream-field relation from Elasticsearch/Opensearch and use it to provide only those fields which are present in the streams used in the query.
+
+If all of your streams go to dedicated, separate index sets, it is advised to keep the default value of `stream_aware_field_types` property (`false`). It will decrease the load on ES/OS and stream separation across index sets already helps with showing proper fields for a query.
+On the other hand, if multiple streams go to the same index sets, and you want precise field types and suggestions, you should set it to `true`. Consider monitoring your ES/OS load after that change, especially when using huge numbers of fields and streams. 
 
 ## API Endpoint Deprecations
 
@@ -131,8 +142,20 @@ UTF-8 encoding.
 cannot handle multiple log sources with different encodings.
 - The permissions for which options are populated in the System dropdown menu were updated to more closely match the page that they link to. See [graylog2-server#13188](https://github.com/Graylog2/graylog2-server/pull/13188) for details.
 The Page permissions remain unchanged but this could affect the workflow for users with legacy permissions.
+- Newly created aggregation widgets will now have rollup disabled by default. Existing widgets are unchanged.
 
 ### Changed archived default path
 On new Graylog installations, the default archiving configuration will now 
 store archives under the `data_dir` instead of `/tmp/graylog-archives`. 
 (The `data_dir` is configured in graylog.conf and defaults to `/var/lib/graylog-server`)
+
+### Configuring archive retention Time and max value
+It is now possible to configure default archive retention time and a limit via config flags:
+`default_archive_retention_time` & `max_archive_retention_time` using a duration in days. e.g. 365d.
+
+## Microsoft Teams Notification Template Changes
+Microsoft Teams notification template parsing no longer parses each line in the template and tries to form a key-value
+pair using a colon delimiter. This will result in Teams notifications with a templated custom message lacking any
+formatting. Existing custom templates should be updated to use HTML or Markdown in order to display properly. If using
+the old default template, it can be replaced with the one found when creating a new Teams notification. It can also be
+found in this [pull request](https://github.com/Graylog2/graylog-plugin-integrations/pull/1202).

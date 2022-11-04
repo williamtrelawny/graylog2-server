@@ -34,6 +34,7 @@ import usePaginationQueryParameter from 'hooks/usePaginationQueryParameter';
 import { PipelineConnectionsStore, PipelineConnectionsActions } from 'stores/pipelines/PipelineConnectionsStore';
 import useCurrentUser from 'hooks/useCurrentUser';
 import { isPermitted } from 'util/PermissionsMixin';
+import ButtonToolbar from 'components/bootstrap/ButtonToolbar';
 
 import PipelineConnectionsList from './PipelineConnectionsList';
 
@@ -108,7 +109,7 @@ const ProcessingTimelineComponent = () => {
   const [streams, setStreams] = useState<Stream[] | undefined>();
   const [paginatedPipelines, setPaginatedPipelines] = useState<PaginatedPipelines|undefined>();
   const [loading, setLoading] = useState(false);
-  const { list: pipelines = Immutable.List(), pagination: { total = 0, count = 0 } = {} } = paginatedPipelines || {};
+  const { list: pipelines = Immutable.List(), pagination: { total = 0 } = {} } = paginatedPipelines || {};
 
   useEffect(() => {
     _loadPipelines({ page, perPage, query }, setLoading, setPaginatedPipelines);
@@ -170,12 +171,7 @@ const ProcessingTimelineComponent = () => {
       // eslint-disable-next-line no-alert
       if (window.confirm(`Do you really want to delete pipeline "${pipeline.title}"? This action cannot be undone.`)) {
         PipelinesActions.delete(pipeline.id).then(() => {
-          if (count > 1) {
-            _loadPipelines({ page, perPage, query }, setLoading, setPaginatedPipelines);
-
-            return;
-          }
-
+          _loadPipelines({ page, perPage, query }, setLoading, setPaginatedPipelines);
           setPage(Math.max(DEFAULT_PAGINATION.page, page - 1));
         });
       }
@@ -206,11 +202,12 @@ const ProcessingTimelineComponent = () => {
         </StreamListTD>
         <td>{_formatStages(pipeline, stages)}</td>
         <td>
-          <Button disabled={!isPermitted(currentUser.permissions, 'pipeline:delete')} bsStyle="primary" bsSize="xsmall" onClick={_deletePipeline(pipeline)}>Delete</Button>
-          &nbsp;
-          <LinkContainer to={Routes.SYSTEM.PIPELINES.PIPELINE(id)}>
-            <Button disabled={!isPermitted(currentUser.permissions, 'pipeline:edit')} bsStyle="info" bsSize="xsmall">Edit</Button>
-          </LinkContainer>
+          <ButtonToolbar>
+            <LinkContainer to={Routes.SYSTEM.PIPELINES.PIPELINE(id)}>
+              <Button disabled={!isPermitted(currentUser.permissions, 'pipeline:edit')} bsSize="xsmall">Edit</Button>
+            </LinkContainer>
+            <Button disabled={!isPermitted(currentUser.permissions, 'pipeline:delete')} bsStyle="danger" bsSize="xsmall" onClick={_deletePipeline(pipeline)}>Delete</Button>
+          </ButtonToolbar>
         </td>
       </tr>
     );

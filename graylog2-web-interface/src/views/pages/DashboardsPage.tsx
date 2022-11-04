@@ -23,7 +23,6 @@ import { LinkContainer } from 'components/common/router';
 import { Col, Row, Button } from 'components/bootstrap';
 import { DocumentTitle, PageHeader, IfPermitted } from 'components/common';
 import Routes from 'routing/Routes';
-import DocumentationLink from 'components/support/DocumentationLink';
 import DashboardList from 'views/components/views/DashboardList';
 import { ViewManagementActions } from 'views/stores/ViewManagementStore';
 import useDashboards from 'views/logic/dashboards/useDashboards';
@@ -31,6 +30,7 @@ import iterateConfirmationHooks from 'views/hooks/IterateConfirmationHooks';
 import usePaginationQueryParameter from 'hooks/usePaginationQueryParameter';
 
 import type View from '../logic/views/View';
+import { DashboardsActions } from '../stores/DashboardsStore';
 
 // eslint-disable-next-line no-alert
 const defaultDashboardDeletionHook = async (view: View) => window.confirm(`Are you sure you want to delete "${view.title}"?`);
@@ -45,50 +45,47 @@ const DashboardsPage = () => {
   };
 
   const handleDashboardDelete = async (view: View) => {
-    resetPage();
-
     const pluginDashboardDeletionHooks = PluginStore.exports('views.hooks.confirmDeletingDashboard');
 
     const result = await iterateConfirmationHooks([...pluginDashboardDeletionHooks, defaultDashboardDeletionHook], view);
 
-    return result === true ? ViewManagementActions.delete(view) : Promise.reject();
+    if (result) {
+      await ViewManagementActions.delete(view);
+      await DashboardsActions.search(searchQuery, page, pageSize);
+      resetPage();
+    }
   };
 
   const { list, pagination } = useDashboards(searchQuery, page, pageSize);
 
   return (
     <DocumentTitle title="Dashboards">
-      <span>
-        <PageHeader title="Dashboards">
-          <span>
-            Use dashboards to create specific views on your messages. Create a new dashboard here and add any graph or
-            chart you create in other parts of Graylog with one click.
-          </span>
+      <PageHeader title="Dashboards"
+                  actions={(
+                    <IfPermitted permissions="dashboards:create">
+                      <LinkContainer to={Routes.pluginRoute('DASHBOARDS_NEW')}>
+                        <Button bsStyle="success">Create new dashboard</Button>
+                      </LinkContainer>
+                    </IfPermitted>
+                    )}
+                  documentationLink={{
+                    title: 'Dashboard documentation',
+                    path: DocsHelper.PAGES.DASHBOARDS,
+                  }}>
+        <span>
+          Use dashboards to create specific views on your messages. Create a new dashboard here and add any graph or
+          chart you create in other parts of Graylog with one click.
+        </span>
+      </PageHeader>
 
-          <span>
-            Take a look at the
-            {' '}<DocumentationLink page={DocsHelper.PAGES.DASHBOARDS} text="dashboard tutorial" />{' '}
-            for lots of other useful tips.
-          </span>
-
-          <IfPermitted permissions="dashboards:create">
-            <span>
-              <LinkContainer to={Routes.pluginRoute('DASHBOARDS_NEW')}>
-                <Button bsStyle="success" bsSize="lg">Create new dashboard</Button>
-              </LinkContainer>
-            </span>
-          </IfPermitted>
-        </PageHeader>
-
-        <Row className="content">
-          <Col md={12}>
-            <DashboardList dashboards={list}
-                           pagination={pagination}
-                           handleSearch={handleSearch}
-                           handleDashboardDelete={handleDashboardDelete} />
-          </Col>
-        </Row>
-      </span>
+      <Row className="content">
+        <Col md={12}>
+          <DashboardList dashboards={list}
+                         pagination={pagination}
+                         handleSearch={handleSearch}
+                         handleDashboardDelete={handleDashboardDelete} />
+        </Col>
+      </Row>
     </DocumentTitle>
   );
 };

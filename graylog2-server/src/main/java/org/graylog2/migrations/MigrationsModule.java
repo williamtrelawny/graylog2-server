@@ -29,6 +29,7 @@ public class MigrationsModule extends PluginModule {
         // even if there are no plugins registered for this migration.
         Multibinder.newSetBinder(binder(), V20201103145400_LegacyAuthServiceMigration.MigrationModule.class);
 
+        addMigration(V19700101000000_GenerateClusterId.class);
         addMigration(V20151210140600_ElasticsearchConfigMigration.class);
         addMigration(V20161116172100_DefaultIndexSetMigration.class);
         addMigration(V20161116172200_CreateDefaultStreamMigration.class);
@@ -57,6 +58,7 @@ public class MigrationsModule extends PluginModule {
         addMigration(V20220719130704_ImprovedDefaultProcessingOrderMigration.class);
         addMigration(V20220623125450_AddJobTypeToJobTrigger.class);
         addMigration(V20220818112023_AddStreamMatcherToProcessingOrderMigration.class);
-
+        addMigration(V20220929145442_MigratePivotLimitsInViews.class);
+        addMigration(V20220930095323_MigratePivotLimitsInSearches.class);
     }
 }

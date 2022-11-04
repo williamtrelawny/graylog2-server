@@ -32,6 +32,7 @@ import FieldTypesContext from 'views/components/contexts/FieldTypesContext';
 import FieldType from 'views/logic/fieldtypes/FieldType';
 import dataTable from 'views/components/datatable/bindings';
 import Pivot from 'views/logic/aggregationbuilder/Pivot';
+import DataTableVisualizationConfig from 'views/logic/aggregationbuilder/visualizations/DataTableVisualizationConfig';
 
 import AggregationWizard from '../AggregationWizard';
 
@@ -43,13 +44,15 @@ const fieldTypeMapping2 = new FieldTypeMapping('http_method', fieldType);
 const fields = Immutable.List([fieldTypeMapping1, fieldTypeMapping2]);
 const fieldTypes = { all: fields, queryFields: Immutable.Map({ queryId: fields }) };
 
-const pivot0 = Pivot.create(fieldTypeMapping1.name, 'values', { limit: 15 });
-const pivot1 = Pivot.create(fieldTypeMapping2.name, 'values', { limit: 15 });
+const pivot0 = Pivot.create(fieldTypeMapping1.name, 'values');
+const pivot1 = Pivot.create(fieldTypeMapping2.name, 'values');
 
 const widgetConfig = AggregationWidgetConfig
   .builder()
   .visualization(DataTable.type)
+  .rowLimit(15)
   .rowPivots([pivot0, pivot1])
+  .visualizationConfig(DataTableVisualizationConfig.empty())
   .build();
 
 const selectEventConfig = { container: document.body };
@@ -61,11 +64,7 @@ const addSortElement = async () => {
   await userEvent.click(await screen.findByRole('menuitem', { name: 'Sort' }));
 };
 
-const findWidgetConfigFormSubmitButton = async () => {
-  const button = await screen.findByRole('button', { name: 'Update Preview' });
-
-  return button;
-};
+const findWidgetConfigFormSubmitButton = () => screen.findByRole('button', { name: /update preview/i });
 
 const submitWidgetConfigForm = async () => {
   const applyButton = await findWidgetConfigFormSubmitButton();
@@ -89,13 +88,15 @@ describe('AggregationWizard', () => {
   const renderSUT = (props = {}) => render(
     <FieldTypesContext.Provider value={fieldTypes}>
       <AggregationWizard onChange={() => {}}
+                         onSubmit={() => {}}
+                         onCancel={() => {}}
                          config={widgetConfig}
                          editing
                          id="widget-id"
                          type="AGGREGATION"
                          fields={Immutable.List([])}
                          {...props}>
-        <>The Visualization</>
+        <span>The Visualization</span>
       </AggregationWizard>
     </FieldTypesContext.Provider>,
   );
@@ -201,7 +202,7 @@ describe('AggregationWizard', () => {
     const newSortContainer = await screen.findByTestId('sort-element-0');
     const applyButton = await findWidgetConfigFormSubmitButton();
     await waitFor(() => expect(within(newSortContainer).getByText('Field is required.')).toBeInTheDocument());
-    await waitFor(() => expect(expect(applyButton).toBeDisabled()));
+    await waitFor(() => expect(applyButton).toBeDisabled());
   });
 
   it('should require direction when creating a sort element', async () => {
@@ -212,7 +213,7 @@ describe('AggregationWizard', () => {
     const newSortContainer = await screen.findByTestId('sort-element-0');
     const applyButton = await findWidgetConfigFormSubmitButton();
     await waitFor(() => expect(within(newSortContainer).getByText('Direction is required.')).toBeInTheDocument());
-    await waitFor(() => expect(expect(applyButton).toBeDisabled()));
+    await waitFor(() => expect(applyButton).toBeDisabled());
   });
 
   it('should remove all sorts', async () => {
