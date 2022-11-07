@@ -16,6 +16,7 @@
  */
 import PropTypes from 'prop-types';
 import React, { useState, useEffect, useCallback } from 'react';
+import { DropdownButton, MenuItem } from 'react-bootstrap';
 
 import { Alert } from 'components/bootstrap';
 import { Icon, IfPermitted, PaginatedList, SearchForm } from 'components/common';
@@ -24,12 +25,19 @@ import QueryHelper from 'components/common/QueryHelper';
 import type { Stream } from 'stores/streams/StreamsStore';
 import StreamsStore from 'stores/streams/StreamsStore';
 import { StreamRulesStore } from 'stores/streams/StreamRulesStore';
-import useCurrentUser from 'hooks/useCurrentUser';
 import usePaginationQueryParameter from 'hooks/usePaginationQueryParameter';
 import type { IndexSet } from 'stores/indices/IndexSetsStore';
+import ConfigurableDataTable from 'components/common/ConfigurableDataTable';
 
-import StreamList from './StreamList';
 import CreateStreamButton from './CreateStreamButton';
+
+const AVAILABLE_ATTRIBUTES = [
+  { id: 'title', title: 'Title' },
+  { id: 'description', title: 'Description' },
+  { id: 'disabled', title: 'Status' },
+];
+
+const VISIBLE_ATTRIBUTES = ['title', 'description', 'disabled'];
 
 type Props = {
   onStreamSave: (streamId: string, stream: Stream) => void,
@@ -37,7 +45,6 @@ type Props = {
 }
 
 const StreamsOverview = ({ onStreamSave, indexSets }: Props) => {
-  const currentUser = useCurrentUser();
   const paginationQueryParameter = usePaginationQueryParameter();
   const [searchParams, setSearchParams] = useState({
     page: paginationQueryParameter.page,
@@ -107,29 +114,35 @@ const StreamsOverview = ({ onStreamSave, indexSets }: Props) => {
                     onReset={onReset}
                     queryHelpComponent={<QueryHelper entityName="stream" />} />
       </div>
-      <div>
-        {streams?.length === 0
-          ? (
-            <Alert bsStyle="warning">
-              <Icon name="info-circle" />&nbsp;No streams found.
-              <IfPermitted permissions="streams:create">
-                <CreateStreamButton bsSize="small"
-                                    bsStyle="link"
-                                    className="btn-text"
-                                    buttonText="Create one now"
-                                    indexSets={indexSets}
-                                    onSave={onStreamSave} />
-              </IfPermitted>
-            </Alert>
-          )
-          : (
-            <StreamList streams={streams}
-                        streamRuleTypes={streamRuleTypes}
-                        permissions={currentUser.permissions}
-                        user={currentUser}
-                        indexSets={indexSets} />
-          )}
-      </div>
+      {streams?.length === 0
+        ? (
+          <Alert bsStyle="warning">
+            <Icon name="info-circle" />&nbsp;No streams found.
+            <IfPermitted permissions="streams:create">
+              <CreateStreamButton bsSize="small"
+                                  bsStyle="link"
+                                  className="btn-text"
+                                  buttonText="Create one now"
+                                  indexSets={indexSets}
+                                  onSave={onStreamSave} />
+            </IfPermitted>
+          </Alert>
+        )
+        : (
+          <ConfigurableDataTable rows={streams}
+                                 attributes={VISIBLE_ATTRIBUTES}
+                                 rowActionsRenderer={(listItem) => (
+                                   <DropdownButton title="More Actions"
+                                                   pullRight
+                                                   bsSize="xsmall"
+                                                   id={`more-actions-dropdown-${listItem.id}`}>
+                                     <MenuItem key={`editStreams-${listItem.id}`}>
+                                       Edit stream
+                                     </MenuItem>
+                                   </DropdownButton>
+                                 )}
+                                 availableAttributes={AVAILABLE_ATTRIBUTES} />
+        )}
     </PaginatedList>
   );
 };
