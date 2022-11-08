@@ -24,7 +24,7 @@ type Attribute = {
   type?: boolean,
 };
 
-type Props<ListItem extends object> = {
+type Props<ListItem extends { id: string }> = {
   rows: Array<ListItem>,
   rowActionsRenderer?: (listItem: ListItem) => React.ReactNode,
   cellRenderer?: (listItem: ListItem, attribute: Attribute, defaultRenderer: (listItem: ListItem, attribute: Attribute) => React.ReactNode) => React.ReactNode,
@@ -36,9 +36,9 @@ type Props<ListItem extends object> = {
 // eslint-disable-next-line react/jsx-no-useless-fragment
 const defaultHeaderRenderer = (attribute: Attribute) => <th>{attribute.title}</th>;
 // eslint-disable-next-line react/jsx-no-useless-fragment
-const defaultCellRenderer = <ListItem extends object>(listItem: ListItem, attribute: Attribute) => <td>{listItem[attribute.id]}</td>;
+const defaultCellRenderer = <ListItem extends { id: string }>(listItem: ListItem, attribute: Attribute) => <td>{listItem[attribute.id]}</td>;
 
-const ConfigurableDataTable = <ListItem extends object>({
+const ConfigurableDataTable = <ListItem extends { id: string }>({
   rows,
   headerRenderer,
   cellRenderer,
@@ -61,7 +61,7 @@ const ConfigurableDataTable = <ListItem extends object>({
       </thead>
       <tbody>
         {rows.map((listItem) => (
-          <tr>
+          <tr key={listItem.id}>
             {selectedAttributes.map((attribute) => (
               typeof cellRenderer === 'function'
                 ? cellRenderer(listItem, attribute, defaultCellRenderer)

@@ -49,6 +49,7 @@ class StreamForm extends React.Component {
     title: PropTypes.string.isRequired,
     submitButtonText: PropTypes.string.isRequired,
     indexSets: PropTypes.array.isRequired,
+    show: PropTypes.bool,
   };
 
   static defaultProps = {
@@ -57,6 +58,7 @@ class StreamForm extends React.Component {
       description: '',
       remove_matches_from_default_stream: false,
     },
+    show: false,
   };
 
   constructor(props) {
@@ -76,7 +78,7 @@ class StreamForm extends React.Component {
 
     onSubmit(stream.id,
       {
-        title,
+        title: (title ?? '').trim(),
         description,
         remove_matches_from_default_stream: removeMatchesFromDefaultStream,
         index_set_id: indexSetId,
@@ -139,11 +141,12 @@ class StreamForm extends React.Component {
   };
 
   render() {
-    const { title: propTitle, submitButtonText } = this.props;
+    const { title: propTitle, submitButtonText, show } = this.props;
     const { title, description, removeMatchesFromDefaultStream } = this.state;
 
     return (
       <BootstrapModalForm ref={(c) => { this.modal = c; }}
+                          show={show}
                           title={propTitle}
                           onSubmitForm={this._onSubmit}
                           submitButtonText={submitButtonText}>

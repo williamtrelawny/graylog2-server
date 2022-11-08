@@ -27,6 +27,7 @@ import Version from 'util/Version';
 import * as FormsUtils from 'util/FormsUtils';
 import type { Store } from 'stores/StoreTypes';
 import { InputsActions, InputsStore } from 'stores/inputs/InputsStore';
+import type { StreamRule } from 'stores/streams/StreamsStore';
 
 const formatStreamRuleType = (streamRuleType) => (
   <option key={`streamRuleType${streamRuleType.id}`}
@@ -40,15 +41,6 @@ const formatInputOptions = (input) => (
     {input.title} ({input.name})
   </option>
 );
-
-type StreamRule = {
-  type: number,
-  field: string,
-  value: string,
-  id?: string,
-  inverted: boolean,
-  description: string,
-};
 
 type StreamRuleType = {
   id: number,
@@ -69,7 +61,7 @@ type Props = {
 };
 
 type State = {
-  streamRule: StreamRule,
+  streamRule: StreamRule & { id?: string },
   error: string,
 };
 
@@ -132,12 +124,12 @@ class StreamRuleForm extends React.Component<Props, State> {
     const { streamRule, onSubmit } = this.props;
     const { onClose } = this.props;
 
-    if (type === this.ALWAYS_MATCH_RULE_TYPE) {
+    if (String(type) === String(this.ALWAYS_MATCH_RULE_TYPE)) {
       currentStreamRule.field = '';
       this.setState({ streamRule: currentStreamRule });
     }
 
-    if (type === this.FIELD_PRESENCE_RULE_TYPE || type === this.ALWAYS_MATCH_RULE_TYPE) {
+    if (String(type) === String(this.FIELD_PRESENCE_RULE_TYPE) || String(type) === String(this.ALWAYS_MATCH_RULE_TYPE)) {
       currentStreamRule.value = '';
       this.setState({ streamRule: currentStreamRule });
     }

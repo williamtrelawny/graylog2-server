@@ -16,7 +16,6 @@
  */
 import PropTypes from 'prop-types';
 import React, { useState, useEffect, useCallback } from 'react';
-import { DropdownButton, MenuItem } from 'react-bootstrap';
 
 import { Alert } from 'components/bootstrap';
 import { Icon, IfPermitted, PaginatedList, SearchForm } from 'components/common';
@@ -28,6 +27,7 @@ import { StreamRulesStore } from 'stores/streams/StreamRulesStore';
 import usePaginationQueryParameter from 'hooks/usePaginationQueryParameter';
 import type { IndexSet } from 'stores/indices/IndexSetsStore';
 import ConfigurableDataTable from 'components/common/ConfigurableDataTable';
+import StreamActions from 'components/streams/StreamActions';
 
 import CreateStreamButton from './CreateStreamButton';
 
@@ -98,6 +98,8 @@ const StreamsOverview = ({ onStreamSave, indexSets }: Props) => {
     onSearch('');
   }, [onSearch]);
 
+  const renderStreamActions = (listItem: Stream) => <StreamActions stream={listItem} indexSets={indexSets} streamRuleTypes={streamRuleTypes} />;
+
   if (isLoading) {
     return (
       <div style={{ marginLeft: 10 }}>
@@ -131,16 +133,7 @@ const StreamsOverview = ({ onStreamSave, indexSets }: Props) => {
         : (
           <ConfigurableDataTable rows={streams}
                                  attributes={VISIBLE_ATTRIBUTES}
-                                 rowActionsRenderer={(listItem) => (
-                                   <DropdownButton title="More Actions"
-                                                   pullRight
-                                                   bsSize="xsmall"
-                                                   id={`more-actions-dropdown-${listItem.id}`}>
-                                     <MenuItem key={`editStreams-${listItem.id}`}>
-                                       Edit stream
-                                     </MenuItem>
-                                   </DropdownButton>
-                                 )}
+                                 rowActionsRenderer={renderStreamActions}
                                  availableAttributes={AVAILABLE_ATTRIBUTES} />
         )}
     </PaginatedList>

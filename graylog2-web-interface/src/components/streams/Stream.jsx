@@ -134,26 +134,26 @@ class Stream extends React.Component {
     this.setState({ showEntityShareModal: true });
   };
 
-  _onResume = () => {
-    const { stream } = this.props;
-
-    this.setState({ loading: true });
-
-    StreamsStore.resume(stream.id, (response) => response)
-      .finally(() => this.setState({ loading: false }));
-  };
-
-  _onPause = () => {
-    const { stream } = this.props;
-
-    // eslint-disable-next-line no-alert
-    if (window.confirm(`Do you really want to pause stream '${stream.title}'?`)) {
-      this.setState({ loading: true });
-
-      StreamsStore.pause(stream.id, (response) => response)
-        .finally(() => this.setState({ loading: false }));
-    }
-  };
+  // _onResume = () => {
+  //   const { stream } = this.props;
+  //
+  //   this.setState({ loading: true });
+  //
+  //   StreamsStore.resume(stream.id, (response) => response)
+  //     .finally(() => this.setState({ loading: false }));
+  // };
+  //
+  // _onPause = () => {
+  //   const { stream } = this.props;
+  //
+  //   // eslint-disable-next-line no-alert
+  //   if (window.confirm(`Do you really want to pause stream '${stream.title}'?`)) {
+  //     this.setState({ loading: true });
+  //
+  //     StreamsStore.pause(stream.id, (response) => response)
+  //       .finally(() => this.setState({ loading: false }));
+  //   }
+  // };
 
   _onSaveStreamRule = (streamRuleId, streamRule) => {
     const { stream } = this.props;
@@ -186,29 +186,29 @@ class Stream extends React.Component {
 
     let toggleStreamLink;
 
-    if (isAnyPermitted(permissions, [`streams:changestate:${stream.id}`, `streams:edit:${stream.id}`])) {
-      if (stream.disabled) {
-        toggleStreamLink = (
-          <OverlayElement overlay={defaultStreamTooltip} placement="top" useOverlay={isDefaultStream} className="overlay-trigger">
-            <ToggleButton bsStyle="success"
-                          onClick={this._onResume}
-                          disabled={isDefaultStream || loading || isNotEditable}>
-              <Icon name="play" /> {loading ? 'Starting...' : 'Start Stream'}
-            </ToggleButton>
-          </OverlayElement>
-        );
-      } else {
-        toggleStreamLink = (
-          <OverlayElement overlay={defaultStreamTooltip} placement="top" useOverlay={isDefaultStream} className="overlay-trigger">
-            <ToggleButton bsStyle="primary"
-                          onClick={this._onPause}
-                          disabled={isDefaultStream || loading || isNotEditable}>
-              <Icon name="pause" /> {loading ? 'Pausing...' : 'Pause Stream'}
-            </ToggleButton>
-          </OverlayElement>
-        );
-      }
-    }
+    // if (isAnyPermitted(permissions, [`streams:changestate:${stream.id}`, `streams:edit:${stream.id}`])) {
+    //   if (stream.disabled) {
+    //     toggleStreamLink = (
+    //       <OverlayElement overlay={defaultStreamTooltip} placement="top" useOverlay={isDefaultStream} className="overlay-trigger">
+    //         <ToggleButton bsStyle="success"
+    //                       onClick={this._onResume}
+    //                       disabled={isDefaultStream || loading || isNotEditable}>
+    //           <Icon name="play" /> {loading ? 'Starting...' : 'Start Stream'}
+    //         </ToggleButton>
+    //       </OverlayElement>
+    //     );
+    //   } else {
+    //     toggleStreamLink = (
+    //       <OverlayElement overlay={defaultStreamTooltip} placement="top" useOverlay={isDefaultStream} className="overlay-trigger">
+    //         <ToggleButton bsStyle="primary"
+    //                       onClick={this._onPause}
+    //                       disabled={isDefaultStream || loading || isNotEditable}>
+    //           <Icon name="pause" /> {loading ? 'Pausing...' : 'Pause Stream'}
+    //         </ToggleButton>
+    //       </OverlayElement>
+    //     );
+    //   }
+    // }
 
     const createdFromContentPack = (stream.content_pack
       ? <Icon name="cube" title="Created from content pack" /> : null);
