@@ -19,7 +19,18 @@ import PropTypes from 'prop-types';
 
 import { MenuItem, BootstrapModalForm, Input } from 'components/bootstrap';
 
-const CloneMenuItem = ({ error, id, modalRef, name, onChange, onSave, onSelect }) => {
+type Props = {
+  error: string,
+  id: string,
+  modalRef: React.Ref<HTMLDivElement>,
+  name: string,
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void,
+  onSave: () => void,
+  onSelect: () => void,
+
+};
+
+const CloneMenuItem = ({ error, id, modalRef, name, onChange, onSave, onSelect }: Props) => {
   return (
     <>
       <MenuItem onSelect={onSelect}>Clone</MenuItem>
