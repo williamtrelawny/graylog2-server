@@ -15,7 +15,6 @@
  * <http://www.mongodb.com/licensing/server-side-public-license>.
  */
 import PropTypes from 'prop-types';
-import { useLocation } from 'react-router-dom';
 import { useCallback, useEffect } from 'react';
 
 import AppConfig from 'util/AppConfig';
@@ -29,10 +28,7 @@ type Props = {
 };
 
 const ConfirmLeaveDialog = ({ question }: Props) => {
-  const location = useLocation();
-  const isLeavingPage = useCallback((newLocation) => (newLocation.pathname !== location.pathname ? question : true), [location.pathname, question]);
-
-  const handleLeavePage = useCallback((e) => {
+  const handleLeavePage = useCallback((e: BeforeUnloadEvent) => {
     if (AppConfig.gl2DevMode()) {
       return null;
     }
@@ -50,7 +46,7 @@ const ConfirmLeaveDialog = ({ question }: Props) => {
     };
   }, [handleLeavePage]);
 
-  usePrompt(isLeavingPage, AppConfig.gl2DevMode());
+  usePrompt(question, !AppConfig.gl2DevMode());
 
   return null;
 };
