@@ -54,7 +54,7 @@ class ConfigurationForm extends React.Component {
       const fieldValue = values[name];
       data.configuration[name] = (fieldValue === undefined ? null : fieldValue);
 
-      if (field.is_encrypted && fieldValue && fieldValue.is_set && !field.dirty) {
+      if (field.is_encrypted && !field.dirty && fieldValue && fieldValue.is_set !== undefined) {
         data.configuration[name] = { keep_value: true };
       }
     });
@@ -110,9 +110,7 @@ class ConfigurationForm extends React.Component {
 
     submitAction(data);
 
-    if (this.modal && this.modal.close) {
-      this.modal.close();
-    }
+    this.setState({ showConfigurationModal: false });
   };
 
   // eslint-disable-next-line react/no-unused-class-component-methods
@@ -120,7 +118,7 @@ class ConfigurationForm extends React.Component {
     this.setState({ showConfigurationModal: true });
   };
 
-  _closeModal = () => {
+  onCancel = () => {
     const { cancelAction, titleValue } = this.props;
 
     this.setState($.extend(this._copyStateFromProps(this.props), { titleValue: titleValue, showConfigurationModal: false }));
@@ -207,7 +205,7 @@ class ConfigurationForm extends React.Component {
     return (
       <WrapperComponent show={this.state.showConfigurationModal}
                         title={title}
-                        onCancel={this._closeModal}
+                        onCancel={this.onCancel}
                         onSubmitForm={this._save}
                         submitButtonText={submitButtonText}>
         <fieldset>
