@@ -31,11 +31,11 @@ export const useColumnRenderers = (
   const requirementsProvided = usePluginEntities('views.requires.provided');
   const customColumnRenderers: ColumnRenderers<View> = useMemo(() => ({
     title: {
-      renderCell: (dashboard) => <TitleCell dashboard={dashboard} requirementsProvided={requirementsProvided} />,
+      renderCell: (_title: string, dashboard) => <TitleCell dashboard={dashboard} requirementsProvided={requirementsProvided} />,
     },
     favorite: {
-      renderCell: (dashboard) => (
-        <FavoriteIcon isFavorite={dashboard.favorite}
+      renderCell: (favorite: boolean, dashboard) => (
+        <FavoriteIcon isFavorite={favorite}
                       id={dashboard.id}
                       onChange={(newValue) => {
                         queryClient.setQueriesData(['dashboards', 'overview', searchParams], (cur: {

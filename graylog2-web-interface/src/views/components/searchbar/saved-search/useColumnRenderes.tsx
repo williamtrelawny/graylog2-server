@@ -49,7 +49,7 @@ const useColumnRenderers = (
 
   return ({
     title: {
-      renderCell: (search) => (
+      renderCell: (title: string, search) => (
         <ViewLoaderContext.Consumer key={search.id}>
           {(loaderFunc) => {
             const onClick = (e) => {
@@ -60,7 +60,7 @@ const useColumnRenderers = (
             return (
               <Link onClick={onClick}
                     to={Routes.getPluginRoute('SEARCH_VIEWID')(search.id)}>
-                {search.title}
+                {title}
               </Link>
             );
           }}
@@ -68,8 +68,8 @@ const useColumnRenderers = (
       ),
     },
     favorite: {
-      renderCell: (search) => (
-        <FavoriteIcon isFavorite={search.favorite}
+      renderCell: (favorite: boolean, search) => (
+        <FavoriteIcon isFavorite={favorite}
                       id={search.id}
                       onChange={(newValue) => {
                         queryClient.setQueriesData(['saved-searches', 'overview', searchParams], (cur: {
