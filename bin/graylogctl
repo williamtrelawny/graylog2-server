@@ -48,9 +48,9 @@ done
 GRAYLOGCTL_DIR=${GRAYLOGCTL_DIR:=$(dirname "$GRAYLOGCTL")}
 GRAYLOG_JVM_DIR="$(dirname "$GRAYLOGCTL_DIR")/jvm"
 GRAYLOG_SERVER_JAR=${GRAYLOG_SERVER_JAR:=graylog.jar}
-GRAYLOG_CONF=${GRAYLOG_CONF:=/etc/graylog/server/server.conf}
+GRAYLOG_CONF=${GRAYLOG_CONF:=etc/graylog/server/server.conf}
 GRAYLOG_PID=${GRAYLOG_PID:=/tmp/graylog.pid}
-LOG_FILE=${LOG_FILE:=log/graylog-server.log}
+LOG_FILE=${LOG_FILE:=var/log/graylog/server.log}
 LOG4J=${LOG4J:=}
 DEFAULT_JAVA_OPTS="-Dlog4j2.formatMsgNoLookups=true -Djdk.tls.acknowledgeCloseNotify=true -Xms1g -Xmx1g -XX:+UseG1GC -server -XX:-OmitStackTraceInFastThrow"
 
